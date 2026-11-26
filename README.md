@@ -13,10 +13,10 @@ This repository currently holds the minimum demo:
 | [04_knn_linear_probe_fewshot.ipynb](notebooks/04_knn_linear_probe_fewshot.ipynb) | kNN, linear probe, 1/10/100% labels | ~10 min on cached features |
 | [06_anomaly_detection_on_embeddings.ipynb](notebooks/06_anomaly_detection_on_embeddings.ipynb) | Normal-only heads, backbone swap, false-positive gallery | ~15 min on cached features |
 
-[![00 setup](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/ssl-pathology-demo/blob/main/notebooks/00_setup_and_data.ipynb)
-[![03 features](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/ssl-pathology-demo/blob/main/notebooks/03_backbone_zoo_feature_extraction.ipynb)
-[![04 probes](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/ssl-pathology-demo/blob/main/notebooks/04_knn_linear_probe_fewshot.ipynb)
-[![06 anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/ssl-pathology-demo/blob/main/notebooks/06_anomaly_detection_on_embeddings.ipynb)
+[![00 setup](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/SSL_pathology_demo/blob/main/notebooks/00_setup_and_data.ipynb)
+[![03 features](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/SSL_pathology_demo/blob/main/notebooks/03_backbone_zoo_feature_extraction.ipynb)
+[![04 probes](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/SSL_pathology_demo/blob/main/notebooks/04_knn_linear_probe_fewshot.ipynb)
+[![06 anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/olonok69/SSL_pathology_demo/blob/main/notebooks/06_anomaly_detection_on_embeddings.ipynb)
 
 Notebooks 01 (BYOL), 02 (mini DINO), 05 (attention vs Grad-CAM) and 07 (OpenSlide) are the later parts of the same spec. They are not in this slice.
 
