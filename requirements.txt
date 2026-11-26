@@ -1,0 +1,20 @@
+# Pinned for a local CPU environment and for Colab.
+# On Colab, do not reinstall torch/torchvision if cuda is already available:
+# pip would replace the CUDA wheel with a CPU build. See the notebook setup cell.
+
+torch==2.14.1
+torchvision==0.29.2
+timm==1.0.31
+lightly==1.6.1
+scikit-learn==1.9.1
+umap-learn==0.6.0
+medmnist==3.0.2
+h5py==3.16.0
+openslide-python==1.4.7
+openslide-bin==4.0.1.2
+matplotlib==3.11.2
+pandas==2.3.3
+numpy==2.5.4
+Pillow==12.3.0
+tqdm==4.67.1
+pytest==8.4.1
