@@ -27,13 +27,13 @@ Open the notebooks from this repo on a Colab T4. Set `MODE = "fast"` in the firs
 Datasets, checkpoints and `.npy` features go to `/content/drive/MyDrive/ssl-demo/` on Colab, or `./cache/` locally. Features are stored at `features/<dataset>/<mode>/<split>/<backbone>.npy`, so a fast run and a full run do not reuse each other's arrays. Every expensive step skips its work when that file is already there and the saved tile index still matches. Seeds are fixed (`SEED = 42` in `ssl_demo.config`). Tables are written to the cache `results/` folder and mirrored to [`results/`](results/).
 
 ```bash
-pip install -e ".[dev]"
-pytest
+uv sync
+uv run pytest
 ```
 
-`pytest` stays on CPU and uses toy tensors. It does not download PathMNIST, ImageNet weights, or DINOv2.
+`uv sync` creates `.venv`, installs this repo, and installs CPU PyTorch from the `cpu` dependency group in `pyproject.toml`. Point the notebook kernel at that `.venv`. `pytest` stays on CPU and uses toy tensors. It does not download PathMNIST, ImageNet weights, or DINOv2.
 
-On Colab, install with `pip install -e .` from the setup cell. That file does not pin torch, so a preinstalled CUDA wheel stays in place. [`requirements.txt`](requirements.txt) pins a local CPU stack, including torch. Do not pip-install that file over a working Colab GPU runtime.
+On Colab, install with `pip install -e .` from the setup cell. Torch is not a project dependency, so a preinstalled CUDA wheel stays in place. [`requirements.txt`](requirements.txt) is the pinned pip fallback for a local CPU stack. Do not pip-install that file, and do not `uv sync`, over a working Colab GPU runtime.
 
 ## Results
 

@@ -1,6 +1,8 @@
-# Pinned for a local CPU environment and for Colab.
-# On Colab, do not reinstall torch/torchvision if cuda is already available:
-# pip would replace the CUDA wheel with a CPU build. See the notebook setup cell.
+# Pinned pip fallback for a local CPU environment.
+# Prefer `uv sync` from pyproject.toml. That installs this repo plus the
+# `cpu` dependency group (CPU torch and torchvision).
+# On Colab, do not install this file: pip would replace the CUDA wheel
+# with a CPU build. The notebook setup cell uses `pip install -e .` instead.
 
 torch==2.14.1
 torchvision==0.29.2

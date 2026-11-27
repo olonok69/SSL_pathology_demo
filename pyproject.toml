@@ -26,6 +26,25 @@ wsi = ["openslide-python==1.4.7", "openslide-bin==4.0.1.2"]
 ssl = ["lightly==1.6.1"]
 dev = ["pytest==8.4.1"]
 
+# Local installs use `uv sync`. Torch is not a project dependency: the Colab
+# setup cell runs `pip install -e .`, and a torch pin there would replace the
+# preinstalled CUDA wheel. `uv sync` still installs CPU wheels via this group.
+[dependency-groups]
+dev = ["pytest==8.4.1"]
+cpu = ["torch==2.14.1", "torchvision==0.29.2"]
+
+[tool.uv]
+default-groups = ["dev", "cpu"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
