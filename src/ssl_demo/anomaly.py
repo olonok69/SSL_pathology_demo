@@ -35,16 +35,41 @@ def _as_features(features: np.ndarray) -> np.ndarray:
 
 
 class KNNDistanceHead:
-    """Mean cosine distance to the k nearest normal features (PatchCore-style, image level)."""
+    """Mean cosine distance to the k nearest normal features (PatchCore-style, image level).
 
-    def __init__(self, k: int = 5, coreset_size: int | None = 2000, seed: int = SEED):
+    With ``center=True`` (the default) the mean of the normal fit features is subtracted
+    before L2 normalisation, for the bank and for every query. Pretrained features share a
+    large common direction (mean cosine to the normal centroid is about 0.82 for ImageNet
+    ResNet-50 and DINOv2 on NCT-CRC tiles), so raw cosine distances are compressed and the
+    ranking is driven by nuisance directions. An untrained ResNet-50 is the extreme case:
+    every tile points almost exactly along the centroid (cosine 1.000), and its raw cosine
+    distance behaves like a stain-intensity measure, not a tissue feature.
+    """
+
+    def __init__(
+        self,
+        k: int = 5,
+        coreset_size: int | None = 2000,
+        seed: int = SEED,
+        center: bool = True,
+    ):
         self.k = k
         self.coreset_size = coreset_size
         self.seed = seed
+        self.center = center
+        self.mean_: np.ndarray | None = None
         self._neighbours: NearestNeighbors | None = None
 
+    def _prepare(self, features: np.ndarray) -> np.ndarray:
+        matrix = _as_features(features)
+        if self.mean_ is not None:
+            matrix = matrix - self.mean_
+        return l2_normalize(matrix).astype(np.float64)
+
     def fit(self, normal_features: np.ndarray) -> "KNNDistanceHead":
-        bank = l2_normalize(normal_features).astype(np.float64)
+        matrix = _as_features(normal_features)
+        self.mean_ = matrix.mean(axis=0) if self.center else None
+        bank = self._prepare(matrix)
         if self.coreset_size is not None and len(bank) > self.coreset_size:
             rng = np.random.default_rng(self.seed)
             chosen = rng.choice(len(bank), size=self.coreset_size, replace=False)
@@ -57,9 +82,22 @@ class KNNDistanceHead:
     def score(self, features: np.ndarray) -> np.ndarray:
         if self._neighbours is None:
             raise RuntimeError("Call fit before score")
-        query = l2_normalize(features).astype(np.float64)
-        distances, _ = self._neighbours.kneighbors(query, return_distance=True)
+        distances, _ = self._neighbours.kneighbors(self._prepare(features), return_distance=True)
         return distances.mean(axis=1).astype(np.float64)
+
+
+def centroid_cosine(features: np.ndarray) -> float:
+    """Mean cosine between each feature vector and the mean vector.
+
+    Close to 1 means every tile points the same way and raw cosine distances say little.
+    """
+    matrix = _as_features(features)
+    unit = l2_normalize(matrix)
+    mean = matrix.mean(axis=0)
+    norm = np.linalg.norm(mean)
+    if norm == 0:
+        return 0.0
+    return float(np.mean(unit @ (mean / norm)))
 
 
 class MahalanobisHead:
@@ -130,6 +168,7 @@ def build_head(name: str, seed: int = SEED, **kwargs):
             k=kwargs.get("k", 5),
             coreset_size=kwargs.get("coreset_size", 2000),
             seed=seed,
+            center=kwargs.get("center", True),
         )
     if name == "mahalanobis":
         return MahalanobisHead(shrinkage=kwargs.get("shrinkage", 0.1))
@@ -363,11 +402,32 @@ def decide_backbone(
             + " ".join(notes)
         )
         return Decision(None, reason)
+    floor = _random_floor_note(subset, tasks)
+    if floor:
+        return Decision(None, floor + " " + " ".join(notes))
     if leaders[0] is not None and all(leader == leaders[0] for leader in leaders):
         reason = f"{leaders[0]} is clearly better on both tasks. " + " ".join(notes)
         return Decision(str(leaders[0]), reason)
     reason = "No backbone is clearly better on both tasks. " + " ".join(notes)
     return Decision(None, reason)
+
+
+def _random_floor_note(subset: pd.DataFrame, tasks: list[str], margin: float = 0.02) -> str | None:
+    """Refuse to name a winner when an untrained backbone leads, or sits within ``margin``."""
+    for task in tasks:
+        block = subset[subset["task"] == task]
+        is_random = block["backbone"].astype(str).str.startswith("random")
+        if not is_random.any() or is_random.all():
+            continue
+        random_value = float(block.loc[is_random, "value"].max())
+        best_trained = float(block.loc[~is_random, "value"].max())
+        if random_value >= best_trained - margin:
+            return (
+                f"Pipeline check: on {task} the untrained backbone scores {random_value:.3f} "
+                f"against {best_trained:.3f} for the best trained one. A random network should "
+                "be the floor, so no winner is declared until the head or the features are checked."
+            )
+    return None
 
 
 def _auroc(y_true, scores) -> float:

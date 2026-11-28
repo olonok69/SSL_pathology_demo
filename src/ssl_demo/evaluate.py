@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -16,6 +19,8 @@ from sklearn.neighbors import NearestNeighbors
 from ssl_demo.arrays import as_1d_labels, l2_normalize
 from ssl_demo.config import SEED
 from ssl_demo.data import stratified_indices
+
+PROBE_CS = (0.001, 0.01, 0.1, 1.0)
 
 METRIC_FNS = {
     "accuracy": accuracy_score,
@@ -71,9 +76,27 @@ def fit_linear_probe(
     test_features: np.ndarray,
     seed: int = SEED,
 ) -> np.ndarray:
-    """Logistic regression on frozen features. The backbone is not updated."""
-    classifier = LogisticRegression(max_iter=1000, solver="lbfgs", random_state=seed)
-    classifier.fit(np.asarray(train_features, dtype=np.float64), as_1d_labels(train_labels))
+    """Standardised logistic regression on frozen features. The backbone is not updated.
+
+    The scaler is fit on the training rows only, and C is chosen by stratified 3-fold
+    cross-validation on those same rows (grid :data:`PROBE_CS`). Test tiles are never
+    used to pick C. Without the scaler, an untrained backbone's nearly parallel features
+    make the probe collapse towards a single class. When a class has fewer than three
+    training rows, cross-validation is not possible and C falls back to 0.1.
+    """
+    labels = as_1d_labels(train_labels)
+    _, counts = np.unique(labels, return_counts=True)
+    if counts.min() >= 3:
+        head = LogisticRegressionCV(
+            Cs=list(PROBE_CS),
+            cv=StratifiedKFold(n_splits=3, shuffle=True, random_state=seed),
+            max_iter=2000,
+            random_state=seed,
+        )
+    else:
+        head = LogisticRegression(C=0.1, max_iter=2000, random_state=seed)
+    classifier = make_pipeline(StandardScaler(), head)
+    classifier.fit(np.asarray(train_features, dtype=np.float64), labels)
     return classifier.predict(np.asarray(test_features, dtype=np.float64)).astype(np.int64)
 
 

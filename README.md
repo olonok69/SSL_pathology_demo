@@ -37,15 +37,24 @@ On Colab, install with `pip install -e .` from the setup cell. Torch is not a pr
 
 ## Results
 
-No measured table is checked in yet. After a real run, notebook 04 writes `results/probe_nct.csv` and notebook 06 writes `results/anomaly.csv`. The `dataset` column says whether a row came from PathMNIST or from the NCT-CRC folder. The file name `probe_nct.csv` is the one the later figure script expects. Empty cells below are intentional.
+Fast mode, seed 42. Probe and Task A use the same NCT-CRC tiles: 10k from NCT-CRC-HE-100K for training, 2k from CRC-VAL-HE-7K for testing (patient-disjoint). Task B uses PatchCamelyon, 5k / 2k. Brackets are 95% bootstrap intervals over test tiles. Source files: [`results/probe_nct.csv`](results/probe_nct.csv) and [`results/anomaly.csv`](results/anomaly.csv).
 
-| Backbone | kNN accuracy | Linear probe accuracy | Task A AUROC (kNN distance) |
-|---|---|---|---|
-| `random_resnet50` | | | |
-| `sup_resnet50_in1k` | | | |
-| `dinov2_vits14` | | | |
+| Backbone | kNN accuracy (k=20) | Linear probe, 1% labels | Linear probe, 100% labels | Task A AUROC (kNN distance) | Task B AUROC (kNN distance) |
+|---|---|---|---|---|---|
+| `random_resnet50` | 0.616 | 0.532 | 0.688 | 0.492 [0.463, 0.517] | 0.683 [0.658, 0.708] |
+| `sup_resnet50_in1k` | 0.841 | 0.750 | 0.903 [0.889, 0.916] | 0.902 [0.883, 0.919] | 0.759 [0.739, 0.778] |
+| `dinov2_vits14` | **0.890** | **0.837** | **0.913** [0.901, 0.925] | **0.937** [0.925, 0.948] | 0.752 [0.732, 0.772] |
 
-Sanity check, not a target: ImageNet features should already be strong on these tiles, and a random network should sit clearly lower. If it does not, normalisation or the cache is wrong.
+What the decision rule says: DINOv2 is clearly ahead on Task A, and the two pretrained backbones tie on Task B, so no backbone is declared clearly better on both tasks.
+
+Two choices behind these numbers matter more than they look:
+
+- **The kNN anomaly head centres the features** on the mean of the normal fit tiles before the cosine. On raw cosine, the untrained ResNet-50 came first on both tasks (Task A AUROC 0.898 against 0.675 for DINOv2). Every untrained feature vector points almost exactly along the same direction (mean cosine to the centroid 1.000; about 0.82 for the pretrained backbones), so raw cosine distance measured stain intensity rather than tissue. Notebook 06 shows raw and centred side by side.
+- **The linear probe standardises the features and picks C by 3-fold cross-validation** on the training rows. Without the scaler, the probe on untrained features collapsed to one class at 10% of the labels.
+
+The Mahalanobis and Isolation Forest heads are still in `anomaly.csv`, and on both tasks they rank the untrained network first. They have not been tuned in this slice; read them as a reminder that the head is part of the comparison, not as a backbone result.
+
+Sanity check, not a target: ImageNet features should already be strong on these tiles, and a random network should sit clearly lower. If it does not, normalisation or the cache is wrong. `decide_backbone` refuses to name a winner when the untrained backbone leads.
 
 ## Datasets and licences
 
