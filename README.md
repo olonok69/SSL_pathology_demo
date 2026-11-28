@@ -49,7 +49,7 @@ What the decision rule says: DINOv2 is clearly ahead on Task A, and the two pret
 
 Two choices behind these numbers matter more than they look:
 
-- **The kNN anomaly head centres the features** on the mean of the normal fit tiles before the cosine. On raw cosine, the untrained ResNet-50 came first on both tasks (Task A AUROC 0.898 against 0.675 for DINOv2). Every untrained feature vector points almost exactly along the same direction (mean cosine to the centroid 1.000; about 0.82 for the pretrained backbones), so raw cosine distance measured stain intensity rather than tissue. Notebook 06 shows raw and centred side by side.
+- **The kNN anomaly head centres the features** on the mean of the normal fit tiles before the cosine. On raw cosine, the untrained ResNet-50 came first on both tasks (Task A AUROC 0.885 against 0.668 for DINOv2 on the same tiles, [`results/anomaly_centring.csv`](results/anomaly_centring.csv)). Every untrained feature vector points almost exactly along the same direction (mean cosine to the centroid 1.000; about 0.82 for the pretrained backbones), so raw cosine distance measured stain intensity rather than tissue. Notebook 06 shows raw and centred side by side.
 - **The linear probe standardises the features and picks C by 3-fold cross-validation** on the training rows. Without the scaler, the probe on untrained features collapsed to one class at 10% of the labels.
 
 The Mahalanobis and Isolation Forest heads are still in `anomaly.csv`, and on both tasks they rank the untrained network first. They have not been tuned in this slice; read them as a reminder that the head is part of the comparison, not as a backbone result.

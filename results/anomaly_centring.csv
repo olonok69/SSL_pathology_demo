@@ -1,0 +1,4 @@
+dataset,backbone,centroid_cosine,auroc_raw_cosine,auroc_centred_cosine
+nct,random_resnet50,1.0,0.885,0.492
+nct,sup_resnet50_in1k,0.82,0.672,0.902
+nct,dinov2_vits14,0.817,0.668,0.937
