@@ -7,6 +7,7 @@ from ssl_demo.anomaly import (
     IsolationForestHead,
     KNNDistanceHead,
     MahalanobisHead,
+    centroid_cosine,
     anomaly_test_set,
     ci_overlap,
     decide_backbone,
@@ -21,11 +22,29 @@ from ssl_demo.anomaly import (
 
 def test_knn_distance_orders_near_and_far():
     bank = np.array([[1.0, 0.0, 0.0], [0.9, 0.1, 0.0]])
-    head = KNNDistanceHead(k=1, coreset_size=None, seed=0)
+    head = KNNDistanceHead(k=1, coreset_size=None, seed=0, center=False)
     head.fit(bank)
     scores = head.score(np.array([[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]))
     assert scores[0] < 0.05
     assert scores[1] > 1.5
+
+
+def test_knn_centering_removes_shared_direction():
+    rng = np.random.default_rng(0)
+    shared = np.full(8, 10.0)
+    centres = np.zeros((2, 8))
+    centres[0, 1], centres[1, 1] = 1.0, -1.0
+    normal = shared + centres[rng.integers(0, 2, 200)] + rng.normal(0, 0.05, size=(200, 8))
+    queries_normal = shared + centres[rng.integers(0, 2, 20)] + rng.normal(0, 0.05, size=(20, 8))
+    anomalies = shared + rng.normal(0, 0.05, size=(20, 8))
+    anomalies[:, 0] += 1.0
+    queries = np.vstack([queries_normal, anomalies])
+    y = np.array([0] * 20 + [1] * 20)
+    assert centroid_cosine(normal) > 0.99
+    head = KNNDistanceHead(k=3, coreset_size=None).fit(normal)
+    assert head.mean_ is not None
+    assert roc_auc_score(y, head.score(queries)) > 0.99
+    assert KNNDistanceHead(center=False).fit(normal).mean_ is None
 
 
 def test_mahalanobis_far_point_and_wide_features():
@@ -157,3 +176,29 @@ def test_decision_rule():
     only_a = decide_backbone(one_task)
     assert only_a.winner is None
     assert "task_b" in only_a.reason
+
+
+def test_decision_refuses_when_random_leads():
+    def row(backbone, task, value):
+        return {
+            "dataset": "nct",
+            "task": task,
+            "backbone": backbone,
+            "head": "knn_distance",
+            "metric": "auroc",
+            "value": value,
+            "ci_low": value - 0.01,
+            "ci_high": value + 0.01,
+        }
+
+    frame = pd.DataFrame(
+        [
+            row("random_resnet50", "task_a", 0.90),
+            row("dinov2_vits14", "task_a", 0.67),
+            row("random_resnet50", "task_b", 0.72),
+            row("dinov2_vits14", "task_b", 0.51),
+        ]
+    )
+    decision = decide_backbone(frame)
+    assert decision.winner is None
+    assert decision.reason.startswith("Pipeline check")
